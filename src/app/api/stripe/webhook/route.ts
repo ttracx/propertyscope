@@ -28,12 +28,14 @@ export async function POST(req: NextRequest) {
           session.subscription as string
         )
 
+        const subData = subscription as unknown as { current_period_end: number; id: string; items: { data: Array<{ price: { id: string } }> } }
+
         await prisma.subscription.update({
           where: { stripeCustomerId: session.customer as string },
           data: {
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: subscription.items.data[0].price.id,
-            stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            stripeSubscriptionId: subData.id,
+            stripePriceId: subData.items.data[0].price.id,
+            stripeCurrentPeriodEnd: new Date(subData.current_period_end * 1000),
             status: 'active',
           },
         })
@@ -41,17 +43,17 @@ export async function POST(req: NextRequest) {
       }
 
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as unknown as { subscription?: string }
         if (invoice.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(
-            invoice.subscription as string
-          )
+          const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
+
+          const subData = subscription as unknown as { current_period_end: number; id: string; items: { data: Array<{ price: { id: string } }> } }
 
           await prisma.subscription.update({
-            where: { stripeSubscriptionId: subscription.id },
+            where: { stripeSubscriptionId: subData.id },
             data: {
-              stripePriceId: subscription.items.data[0].price.id,
-              stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              stripePriceId: subData.items.data[0].price.id,
+              stripeCurrentPeriodEnd: new Date(subData.current_period_end * 1000),
               status: 'active',
             },
           })
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
+        const subscription = event.data.object as unknown as { current_period_end: number; id: string }
         await prisma.subscription.update({
           where: { stripeSubscriptionId: subscription.id },
           data: {

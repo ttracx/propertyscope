@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CreditCard, Check, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -17,7 +17,7 @@ const benefits = [
   'API access',
 ]
 
-export default function BillingPage() {
+function BillingContent() {
   const searchParams = useSearchParams()
   const success = searchParams.get('success')
   const canceled = searchParams.get('canceled')
@@ -182,5 +182,17 @@ export default function BillingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    }>
+      <BillingContent />
+    </Suspense>
   )
 }
